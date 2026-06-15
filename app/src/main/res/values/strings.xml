@@ -1,0 +1,5 @@
+<resources>
+    <string name="app_name">World Cup IPTV Player</string>
+    <string name="load_playlist">Load Playlist</string>
+    <string name="no_channels">No channels loaded</string>
+</resources>
