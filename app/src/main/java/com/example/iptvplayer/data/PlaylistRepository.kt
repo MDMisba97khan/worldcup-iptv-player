@@ -7,26 +7,26 @@ import android.util.Log
 import com.example.iptvplayer.NativePlaylistParser
 import com.example.iptvplayer.model.Channel
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withContext
 import okhttp3.Dns
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.dnsoverhttps.DnsOverHttps
-import java.net.InetAddress
+import okhttp3.HttpUrl
 import java.util.concurrent.TimeUnit
 
 object PlaylistRepository {
 
     private const val TAG = "PlaylistRepository"
 
-    // Cloudflare DoH bootstrap IPs + HTTPS resolver
     private val dohDns = DnsOverHttps(
         okHttpClient = OkHttpClient.Builder()
             .connectTimeout(10, TimeUnit.SECONDS)
             .readTimeout(15, TimeUnit.SECONDS)
             .build(),
         platform = Dns.SYSTEM,
-        url = okhttp3.HttpUrl.Companion.get("https://cloudflare-dns.com/dns-query")
+        url = HttpUrl.get("https://cloudflare-dns.com/dns-query")
     )
 
     private val okHttpClient = OkHttpClient.Builder()
@@ -42,8 +42,11 @@ object PlaylistRepository {
         return caps.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
     }
 
-    suspend fun fetchPrimaryRaw(context: Context): String? = fetchRaw(PlaylistPreferences.primaryUrl(context).first())
-    suspend fun fetchSecondaryRaw(context: Context): String? = fetchRaw(PlaylistPreferences.secondaryUrl(context).first())
+    suspend fun fetchPrimaryRaw(context: Context): String? =
+        fetchRaw(PlaylistPreferences.primaryUrl(context).first())
+
+    suspend fun fetchSecondaryRaw(context: Context): String? =
+        fetchRaw(PlaylistPreferences.secondaryUrl(context).first())
 
     private suspend fun fetchRaw(url: String): String? {
         return withContext(Dispatchers.IO) {
@@ -69,15 +72,13 @@ object PlaylistRepository {
             try {
                 val ptr = NativePlaylistParser.nativeCreateParser()
                 try {
-                    val list = NativePlaylistParser.nativeParseM3U(ptr, raw)
-                    return@withContext list
+                    NativePlaylistParser.nativeParseM3U(ptr, raw)
                 } finally {
                     NativePlaylistParser.nativeDestroyParser(ptr)
                 }
             } catch (e: Exception) {
                 Log.e(TAG, "Native parse failed, falling back to Kotlin parser", e)
-                val fallback = com.example.iptvplayer.M3UParser().parse(raw)
-                fallback
+                com.example.iptvplayer.M3UParser().parse(raw)
             }
         }
     }

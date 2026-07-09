@@ -1,5 +1,7 @@
 package com.example.iptvplayer
 
+import com.example.iptvplayer.model.Channel
+
 object NativePlaylistParser {
     init {
         System.loadLibrary("playlist-parser")

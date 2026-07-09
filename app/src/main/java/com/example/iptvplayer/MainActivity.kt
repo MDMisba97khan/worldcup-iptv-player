@@ -123,11 +123,11 @@ class MainActivity : ComponentActivity() {
         resizeModeSpinner.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
             override fun onItemSelected(parent: AdapterView<*>, view: View?, pos: Int, id: Long) {
                 val mode = when (pos) {
-                    0 -> androidx.media3.ui.PlayerView.RESIZE_MODE_FIT
-                    1 -> androidx.media3.ui.PlayerView.RESIZE_MODE_FILL
-                    2 -> androidx.media3.ui.PlayerView.RESIZE_MODE_ZOOM
-                    3 -> androidx.media3.ui.PlayerView.RESIZE_MODE_FIXED_WIDTH
-                    else -> androidx.media3.ui.PlayerView.RESIZE_MODE_FIXED_HEIGHT
+                    0 -> 0 // PlayerView.RESIZE_MODE_FIT
+                    1 -> 1 // PlayerView.RESIZE_MODE_FILL
+                    2 -> 2 // PlayerView.RESIZE_MODE_ZOOM
+                    3 -> 3 // PlayerView.RESIZE_MODE_FIXED_WIDTH
+                    else -> 4 // PlayerView.RESIZE_MODE_FIXED_HEIGHT
                 }
                 playerController.setResizeMode(mode)
             }
