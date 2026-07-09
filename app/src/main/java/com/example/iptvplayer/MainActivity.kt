@@ -148,16 +148,6 @@ class MainActivity : ComponentActivity() {
     private var isFullscreen = false
 
     private fun enableAutoRotationAndFullscreen() {
-        try {
-            Settings.System.putInt(
-                contentResolver,
-                Settings.System.ACCELEROMETER_ROTATION,
-                1
-            )
-        } catch (e: Exception) {
-            Log.w(TAG, "Auto-rotation setting update failed", e)
-        }
-
         val listener = object : OrientationEventListener(this) {
             private var lastLandscape = false
             override fun onOrientationChanged(orientation: Int) {
