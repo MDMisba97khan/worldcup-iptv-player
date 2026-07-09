@@ -7,6 +7,7 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
+import android.provider.Settings
 import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
@@ -108,6 +109,8 @@ class MainActivity : ComponentActivity() {
             playerController.togglePip()
         }
 
+        enableAutoRotationAndFullscreen()
+
         // Prefill with detected cached URLs if available
         lifecycleScope.launch {
             val primary = PlaylistPreferences.primaryUrl(this@MainActivity).first()
@@ -142,6 +145,46 @@ class MainActivity : ComponentActivity() {
     }
 
     private var isFullscreen = false
+
+    private fun enableAutoRotationAndFullscreen() {
+        try {
+            Settings.System.putInt(
+                contentResolver,
+                Settings.System.ACCELEROMETER_ROTATION,
+                1
+            )
+        } catch (e: Exception) {
+            Log.w(TAG, "Auto-rotation setting update failed", e)
+        }
+
+        val listener = object : OrientationEventListener(this) {
+            private var lastLandscape = false
+            override fun onOrientationChanged(orientation: Int) {
+                val isLandscape = orientation in 331..359 || orientation in 0..29 || orientation in 151..209
+                if (isLandscape == lastLandscape) return
+                lastLandscape = isLandscape
+                runOnUiThread {
+                    playerViewWrapper.requestLayout()
+                    playerViewWrapper.visibility = View.VISIBLE
+                    window.decorView.systemUiVisibility = if (isLandscape) {
+                        View.SYSTEM_UI_FLAG_FULLSCREEN or
+                                View.SYSTEM_UI_FLAG_HIDE_NAVIGATION or
+                                View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY
+                    } else {
+                        View.SYSTEM_UI_FLAG_VISIBLE
+                    }
+                    isFullscreen = isLandscape
+                    if (isLandscape) {
+                        playerViewWrapper.layoutParams.height = ViewGroup.LayoutParams.MATCH_PARENT
+                    } else {
+                        playerViewWrapper.layoutParams.height = (180 * resources.displayMetrics.density).toInt()
+                    }
+                    playerViewWrapper.layoutParams = playerViewWrapper.layoutParams
+                }
+            }
+        }
+        listener.enable()
+    }
 
     private fun setupResizeModes() {
         val modes = listOf("FIT", "FILL", "ZOOM", "FIXED_WIDTH", "FIXED_HEIGHT")
