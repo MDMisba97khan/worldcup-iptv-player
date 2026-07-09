@@ -1,1 +1,15 @@
 release.keystore
+gradle.properties
+local.properties
+*.keystore
+*.jks
+*.apk
+*.aab
+/build
+/.gradle
+/captures
+/.idea
+*.iml
+/.vscode
+/.DS_Store
+Thumbs.db
