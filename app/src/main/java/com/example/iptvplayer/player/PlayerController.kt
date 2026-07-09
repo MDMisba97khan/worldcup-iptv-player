@@ -4,9 +4,9 @@ import android.app.PictureInPictureParams
 import android.content.Context
 import android.os.Build
 import android.util.Log
-import android.view.GestureDetector
 import android.view.MotionEvent
 import android.view.View
+import android.widget.ProgressBar
 import androidx.core.view.GestureDetectorCompat
 import androidx.media3.common.AudioAttributes
 import androidx.media3.common.MediaItem
@@ -14,13 +14,13 @@ import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.datasource.DefaultHttpDataSource
 import androidx.media3.exoplayer.ExoPlayer
-import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
 import androidx.media3.ui.PlayerView
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 class PlayerController(
     private val context: Context,
@@ -40,19 +40,6 @@ class PlayerController(
     @OptIn(UnstableApi::class)
     private fun initPlayer() {
         val httpDataSourceFactory: DefaultHttpDataSource.Factory = try {
-            // Prefer custom OkHttp-based factory if available; otherwise fail closed to default
-            val okHttpClient = okhttp3.OkHttpClient.Builder()
-                .addInterceptor(okhttp3.Interceptor { chain ->
-                    val req = chain.request().newBuilder()
-                        .header(
-                            "User-Agent",
-                            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
-                        )
-                        .build()
-                    chain.proceed(req)
-                })
-                .build()
-            okhttp3.OkHttpClient().newBuilder().build()
             DefaultHttpDataSource.Factory()
                 .setUserAgent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
         } catch (e: Exception) {
@@ -69,33 +56,24 @@ class PlayerController(
                 true
             )
             .setHandleAudioBecomingNoisy(true)
-            .setMediaSourceFactory(DefaultMediaSourceFactory(activityContext, httpDataSourceFactory))
             .build()
             .also { exo ->
                 playerView.player = exo
                 playerView.useController = true
 
+                val pbLoading = (playerView.parent as? android.view.ViewGroup)?.findViewById<ProgressBar>(R.id.pbLoading)
                 exo.addListener(object : Player.Listener {
                     override fun onPlaybackStateChanged(playbackState: Int) {
                         Log.d("IPTV_PLAYER", "State changed: $playbackState")
                         val isPlaying = exo.isPlaying
                         onPlayerStateChanged(isPlaying)
-                        if (playbackState == Player.STATE_BUFFERING) {
-                            (playerView.context as? android.app.Activity)?.runOnUiThread {
-                                (playerView.parent as? android.view.ViewGroup)?.findViewById<android.widget.ProgressBar>(androidx.media3.ui.R.id.media3_loading)?.show()
-                            }
-                        } else if (playbackState == Player.STATE_READY || playbackState == Player.STATE_IDLE || playbackState == Player.STATE_ENDED) {
-                            (playerView.context as? android.app.Activity)?.runOnUiThread {
-                                (playerView.parent as? android.view.ViewGroup)?.findViewById<android.widget.ProgressBar>(androidx.media3.ui.R.id.media3_loading)?.hide()
-                            }
-                        }
+                        pbLoading?.visibility = if (playbackState == Player.STATE_BUFFERING) View.VISIBLE else View.GONE
                         if (playbackState == Player.STATE_ENDED || playbackState == Player.STATE_IDLE) {
                             release()
                             onPlayerStateChanged(false)
                         }
                     }
 
-                    @androidx.annotation.OptIn(androidx.media3.common.util.UnstableApi::class)
                     override fun onPlayerError(error: androidx.media3.common.PlaybackException) {
                         Log.e("IPTV_PLAYER", "Playback Error: ${error.localizedMessage}", error)
                         android.widget.Toast.makeText(context, "Playback Error: ${error.localizedMessage}", android.widget.Toast.LENGTH_LONG).show()
@@ -105,15 +83,13 @@ class PlayerController(
             }
     }
 
-    fun playMedia(uri: String) {
+    suspend fun playMedia(uri: String) {
         fallbackJob?.cancel()
         try {
-            kotlinx.coroutines.withContext(Dispatchers.Main) {
-                player?.let { exo ->
-                    exo.setMediaItem(MediaItem.fromUri(uri))
-                    exo.prepare()
-                    exo.play()
-                }
+            player?.let { exo ->
+                exo.setMediaItem(MediaItem.fromUri(uri))
+                exo.prepare()
+                exo.play()
             }
         } catch (e: Exception) {
             Log.e(TAG, "playMedia failed for: $uri", e)

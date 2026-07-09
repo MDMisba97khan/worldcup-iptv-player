@@ -32,6 +32,7 @@ import com.example.iptvplayer.player.PlayerController
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 class MainActivity : ComponentActivity() {
 
@@ -194,7 +195,7 @@ class MainActivity : ComponentActivity() {
                 tvStatus.text = "Playing: ${channel.name}"
             } catch (t: Throwable) {
                 Log.e(TAG, "playChannel failed", t)
-                runOnMain("Playback error: ${t.message}")
+                tvStatus.text = "Playback error: ${t.message}"
             }
         }
     }
