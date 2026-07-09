@@ -1,155 +1,210 @@
 package com.example.iptvplayer
 
+import android.app.PictureInPictureParams
+import android.app.Service
+import android.content.Context
+import android.content.Intent
+import android.content.pm.PackageManager
+import android.os.Build
 import android.os.Bundle
-import android.view.LayoutInflater
+import android.util.Log
 import android.view.View
 import android.view.ViewGroup
+import android.widget.AdapterView
+import android.widget.ArrayAdapter
 import android.widget.Button
 import android.widget.EditText
+import android.widget.Spinner
 import android.widget.TextView
 import android.widget.Toast
-import androidx.appcompat.app.AppCompatActivity
+import androidx.activity.ComponentActivity
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.core.app.ActivityCompat
+import androidx.core.content.ContextCompat
+import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
-import androidx.media3.common.MediaItem
-import androidx.media3.exoplayer.ExoPlayer
-import androidx.media3.ui.PlayerView
-import java.net.HttpURLConnection
-import java.net.URL
+import com.example.iptvplayer.data.PlaylistPreferences
+import com.example.iptvplayer.data.PlaylistRepository
+import com.example.iptvplayer.model.Channel
+import com.example.iptvplayer.player.PlayerController
+import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
 
-class MainActivity : AppCompatActivity() {
+class MainActivity : ComponentActivity() {
 
+    companion object {
+        private const val TAG = "MainActivity"
+        private const val NOTIFICATION_PERMISSION_REQUEST = 1001
+    }
+
+    // UI
     private lateinit var etM3uUrl: EditText
     private lateinit var btnLoad: Button
+    private lateinit var btnPrimary: Button
+    private lateinit var btnSecondary: Button
     private lateinit var rvChannels: RecyclerView
-    private lateinit var playerView: PlayerView
-    private lateinit var channelsAdapter: ChannelsAdapter
+    private lateinit var playerViewWrapper: View
+    private lateinit var resizeModeSpinner: Spinner
+    private lateinit var btnPip: Button
+    private lateinit var tvStatus: TextView
 
-    private var player: ExoPlayer? = null
-    private val m3uParser = M3UParser()
-    private var channelList = mutableListOf<M3UParser.Channel>()
+    private lateinit var playerController: PlayerController
+
+    // Background executor
+    private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO
 
     override fun onCreate(savedInstanceState: Bundle?) {
-        try {
-            super.onCreate(savedInstanceState)
-            setContentView(R.layout.activity_main)
+        super.onCreate(savedInstanceState)
+        setContentView(R.layout.activity_main)
 
-            // Skip problematic initialization steps for now
-            // TODO: Re-enable AdMob after valid `ca-app-pub-xxxx` app ID is configured
+        requestNotificationPermission()
 
-            etM3uUrl = findViewById(R.id.etM3uUrl)
-            btnLoad = findViewById(R.id.btnLoad)
-            rvChannels = findViewById(R.id.rvChannels)
-            playerView = findViewById(R.id.playerView)
+        etM3uUrl = findViewById(R.id.etM3uUrl)
+        btnLoad = findViewById(R.id.btnLoad)
+        btnPrimary = findViewById(R.id.btnPrimary)
+        btnSecondary = findViewById(R.id.btnSecondary)
+        rvChannels = findViewById(R.id.rvChannels)
+        playerViewWrapper = findViewById(R.id.playerViewWrapper)
+        resizeModeSpinner = findViewById(R.id.resizeModeSpinner)
+        btnPip = findViewById(R.id.btnPip)
+        tvStatus = findViewById(R.id.tvStatus)
 
-            rvChannels.layoutManager = LinearLayoutManager(this)
-            channelsAdapter = ChannelsAdapter { pos ->
-                if (pos in channelList.indices) {
-                    playChannel(channelList[pos])
-                }
+        playerController = PlayerController(this, findViewById(R.id.playerView), lifecycleScope) { playing ->
+            Log.d(TAG, "Player isPlaying=$playing")
+        }
+        playerController.setupGestures()
+
+        rvChannels.layoutManager = LinearLayoutManager(this)
+        var channelsAdapter = ChannelsAdapter { pos ->
+            if (pos in channelList.indices) {
+                playChannel(channelList[pos])
             }
-            rvChannels.adapter = channelsAdapter
+        }
+        rvChannels.adapter = channelsAdapter
 
-            player = try {
-                ExoPlayer.Builder(this).build()
-            } catch (e: Exception) {
-                Toast.makeText(this, "Player unavailable: ${e.message}", Toast.LENGTH_SHORT).show()
-                null
-            }
+        setupResizeModes()
 
-            if (player != null) {
-                playerView.player = player
-                findViewById<androidx.media3.ui.PlayerView>(R.id.playerView).useController = true
-            } else {
-                playerView.visibility = View.GONE
-            }
+        // Notification permission toggle helper
+        btnPip.setOnClickListener {
+            startForegroundService(Intent(this, PlaybackForegroundService::class.java))
+            playerController.togglePip()
+        }
 
-            btnLoad.setOnClickListener { loadPlaylistFromUrl() }
-            etM3uUrl.setOnEditorActionListener { _, actionId, _ ->
-                if (actionId == android.view.inputmethod.EditorInfo.IME_ACTION_GO) {
-                    loadPlaylistFromUrl()
-                    true
-                } else false
-            }
-        } catch (t: Throwable) {
-            try {
-                Toast.makeText(this, "Startup error: ${t.message}", Toast.LENGTH_LONG).show()
-            } catch (_: Exception) { }
+        // Prefill with detected cached URLs if available
+        lifecycleScope.launch {
+            val primary = PlaylistPreferences.primaryUrl(this@MainActivity).first()
+            val secondary = PlaylistPreferences.secondaryUrl(this@MainActivity).first()
+            etM3uUrl.setText(primary)
+            if (primary.isNotBlank()) btnPrimary.text = "Primary ✓"
+            if (secondary.isNotBlank()) btnSecondary.text = "Secondary ✓"
+        }
+
+        btnPrimary.setOnClickListener {
+            etM3uUrl.setText(PlaylistPreferences.primaryUrl(this).first())
+        }
+        btnSecondary.setOnClickListener {
+            etM3uUrl.setText(PlaylistPreferences.secondaryUrl(this).first())
+        }
+        btnLoad.setOnClickListener { loadPlaylistFromUrl() }
+        etM3uUrl.setOnEditorActionListener { _, actionId, _ ->
+            if (actionId == android.view.inputmethod.EditorInfo.IME_ACTION_GO) {
+                loadPlaylistFromUrl()
+                true
+            } else false
         }
     }
 
-    private fun fetchM3uFromUrl(urlString: String): String? {
-        return try {
-            val url = URL(urlString)
-            val connection = url.openConnection() as HttpURLConnection
-            connection.requestMethod = "GET"
-            connection.connectTimeout = 8000
-            connection.readTimeout = 12000
-            if (connection.responseCode == 200) {
-                connection.inputStream.bufferedReader().use { it.readText() }
-            } else {
-                null
+    private fun setupResizeModes() {
+        val modes = listOf("FIT", "FILL", "ZOOM", "FIXED_WIDTH", "FIXED_HEIGHT")
+        resizeModeSpinner.adapter = ArrayAdapter(this, android.R.layout.simple_spinner_dropdown_item, modes)
+        resizeModeSpinner.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
+            override fun onItemSelected(parent: AdapterView<*>, view: View?, pos: Int, id: Long) {
+                val mode = when (pos) {
+                    0 -> androidx.media3.ui.PlayerView.RESIZE_MODE_FIT
+                    1 -> androidx.media3.ui.PlayerView.RESIZE_MODE_FILL
+                    2 -> androidx.media3.ui.PlayerView.RESIZE_MODE_ZOOM
+                    3 -> androidx.media3.ui.PlayerView.RESIZE_MODE_FIXED_WIDTH
+                    else -> androidx.media3.ui.PlayerView.RESIZE_MODE_FIXED_HEIGHT
+                }
+                playerController.setResizeMode(mode)
             }
-        } catch (e: Exception) {
-            e.printStackTrace()
-            null
+
+            override fun onNothingSelected(parent: AdapterView<*>) {}
+        }
+    }
+
+    private fun requestNotificationPermission() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            val permission = android.Manifest.permission.POST_NOTIFICATIONS
+            if (ContextCompat.checkSelfPermission(this, permission) != PackageManager.PERMISSION_GRANTED) {
+                ActivityCompat.requestPermissions(this, arrayOf(permission), NOTIFICATION_PERMISSION_REQUEST)
+            }
         }
     }
 
     private fun loadPlaylistFromUrl() {
         val url = etM3uUrl.text.toString().trim()
         if (url.isEmpty()) {
-            Toast.makeText(this, "Please enter a .m3u URL", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, "Enter a playlist URL", Toast.LENGTH_SHORT).show()
             return
         }
-        showLoading(true)
-        Thread {
-            val content = fetchM3uFromUrl(url)
-            runOnUiThread {
-                showLoading(false)
-                if (content == null || content.isEmpty()) {
-                    Toast.makeText(this, "Failed to load playlist", Toast.LENGTH_SHORT).show()
-                    return@runOnUiThread
-                }
-                channelList.clear()
-                channelList.addAll(m3uParser.parse(content))
-                if (channelList.isEmpty()) {
-                    Toast.makeText(this, "No channels found", Toast.LENGTH_SHORT).show()
-                } else {
-                    channelsAdapter.submitList(channelList)
-                    Toast.makeText(this, "Loaded ${channelList.size} channels", Toast.LENGTH_SHORT).show()
-                }
-            }
-        }.start()
-    }
 
-    private fun playChannel(channel: M3UParser.Channel) {
-        try {
-            player?.let { p ->
-                playerView.visibility = View.VISIBLE
-                p.seekToDefaultPosition()
-                p.setMediaItem(MediaItem.fromUri(channel.url))
-                p.prepare()
-                p.play()
-            } ?: run {
-                Toast.makeText(this, "Player not available", Toast.LENGTH_SHORT).show()
+        tvStatus.text = "Loading playlist..."
+        lifecycleScope.launch(ioDispatcher) {
+            try {
+                val primaryRaw = PlaylistRepository.fetchPrimaryRaw(this@MainActivity)
+                val secondaryRaw = PlaylistRepository.fetchSecondaryRaw(this@MainActivity)
+
+                val chosen = primaryRaw ?: secondaryRaw
+                if (chosen == null) {
+                    runOnMain("Failed to load both playlists")
+                    return@launch
+                }
+
+                val channels = PlaylistRepository.parseWithNativeEngine(chosen)
+                runOnMain {
+                    channelList.clear()
+                    channelList.addAll(channels)
+                    (rvChannels.adapter as ChannelsAdapter).submitList(channelList)
+                    tvStatus.text = "Loaded ${channelList.size} channels"
+                }
+            } catch (t: Throwable) {
+                Log.e(TAG, "Playlist load failed", t)
+                runOnMain("Error: ${t.message}")
             }
-        } catch (e: Exception) {
-            e.printStackTrace()
-            Toast.makeText(this, "Playback failed: ${e.message}", Toast.LENGTH_SHORT).show()
         }
     }
 
-    private fun showLoading(loading: Boolean) {
-        etM3uUrl.isEnabled = !loading
-        btnLoad.isEnabled = !loading
-        etM3uUrl.hint = if (loading) "Loading…" else "Enter .m3u URL"
+    private fun playChannel(channel: Channel) {
+        lifecycleScope.launch(ioDispatcher) {
+            try {
+                // In full implementation, iterate channel alternatives if URL format supports variants
+                val chosenUrl = channel.url
+                runOnMain {
+                    playerController.playMedia(chosenUrl)
+                    playerViewWrapper.visibility = View.VISIBLE
+                    tvStatus.text = "Playing: ${channel.name}"
+                }
+            } catch (t: Throwable) {
+                Log.e(TAG, "playChannel failed", t)
+                runOnMain("Playback error: ${t.message}")
+            }
+        }
     }
 
+    private fun runOnMain(message: String) {
+        lifecycleScope.launch(Dispatchers.Main) {
+            tvStatus.text = message
+        }
+    }
+
+    private val channelList = mutableListOf<Channel>()
+
     override fun onDestroy() {
-        try {
-            player?.release()
-        } catch (_: Exception) { }
+        playerController.release()
         super.onDestroy()
     }
 
@@ -157,9 +212,9 @@ class MainActivity : AppCompatActivity() {
         private val onItemClick: (Int) -> Unit
     ) : RecyclerView.Adapter<ChannelsAdapter.ChannelVH>() {
 
-        private var items = listOf<M3UParser.Channel>()
+        private var items = listOf<Channel>()
 
-        fun submitList(newList: List<M3UParser.Channel>) {
+        fun submitList(newList: List<Channel>) {
             items = newList
             notifyDataSetChanged()
         }
@@ -178,7 +233,7 @@ class MainActivity : AppCompatActivity() {
 
         inner class ChannelVH(itemView: View) :
             RecyclerView.ViewHolder(itemView) {
-            fun bind(channel: M3UParser.Channel) {
+            fun bind(channel: Channel) {
                 (itemView as TextView).text = channel.name
                 itemView.setOnClickListener {
                     val pos = bindingAdapterPosition
