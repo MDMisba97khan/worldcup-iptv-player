@@ -5,13 +5,14 @@ import android.view.View
 import android.widget.Button
 import android.widget.EditText
 import android.widget.Toast
+import android.widget.TextView
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
-import com.google.android.exoplayer2.ExoPlayer
-import com.google.android.exoplayer2.MediaItem
-import com.google.android.exoplayer2.ui.PlayerView
+import androidx.media3.common.MediaItem
+import androidx.media3.exoplayer.ExoPlayer
+import androidx.media3.ui.PlayerView
 import java.io.BufferedReader
 import java.io.InputStreamReader
 import java.net.HttpURLConnection
@@ -120,7 +121,7 @@ class MainActivity : AppCompatActivity() {
     private fun playChannel(channel: M3UParser.Channel) {
         playerView.visibility = View.VISIBLE
         player.seekToDefaultPosition()
-        player.setMediaItem(MediaItem.from(channel.url))
+        player.setMediaItem(MediaItem.fromUri(channel.url))
         player.prepare()
         player.play()
     }
@@ -168,7 +169,7 @@ class MainActivity : AppCompatActivity() {
         inner class ChannelViewHolder(itemView: android.view.View) :
             RecyclerView.ViewHolder(itemView) {
             fun bind(channel: M3UParser.Channel) {
-                itemView.text = channel.name
+                (itemView as TextView).text = channel.name
                 itemView.setOnClickListener { onItemClick(bindingAdapterPosition) }
             }
         }
