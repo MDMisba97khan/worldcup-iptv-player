@@ -11,7 +11,6 @@ import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.view.ViewGroup
 import android.widget.AdapterView
 import android.widget.ArrayAdapter
 import android.widget.Button
@@ -244,10 +243,9 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun advanceToNextChannel() {
-        playerController.resetForChannelSwitch()
-        val pos = (channelsAdapter?.let { adapter -> 0 }).coerceAtLeast(0)
-        val next = (pos + 1).coerceAtMost(channelList.lastIndex)
-        if (next != pos && next >= 0) {
+        val pos = (playerController as? android.view.View)?.let { 0 } ?: 0
+        val next = (pos + 1).coerceAtMost((channelList.size - 1).coerceAtLeast(0))
+        if (next in channelList.indices && next != pos) {
             playChannel(channelList[next])
         }
     }
@@ -255,7 +253,6 @@ class MainActivity : ComponentActivity() {
     private fun playChannel(channel: Channel) {
         lifecycleScope.launch(Dispatchers.Main) {
             try {
-                playerController.resetForChannelSwitch()
                 val chosenUrl = channel.url
                 playerController.playMedia(chosenUrl)
                 playerViewWrapper.visibility = View.VISIBLE
