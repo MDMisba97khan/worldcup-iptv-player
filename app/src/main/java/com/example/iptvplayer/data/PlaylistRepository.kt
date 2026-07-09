@@ -4,14 +4,11 @@ import android.content.Context
 import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
 import android.util.Log
-import androidx.datastore.preferences.core.edit
-import androidx.datastore.preferences.preferencesDataStore
 import com.example.iptvplayer.NativePlaylistParser
 import com.example.iptvplayer.model.Channel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withContext
-import kotlinx.coroutines.flow.map
 import okhttp3.Dns
 import okhttp3.OkHttpClient
 import okhttp3.Request
@@ -40,6 +37,12 @@ object PlaylistRepository {
     suspend fun fetchSecondaryRaw(context: Context): String? =
         fetchRaw(PlaylistPreferences.secondaryUrl(context).first())
 
+    suspend fun fetchTertiary1Raw(context: Context): String? =
+        fetchRaw(PlaylistPreferences.tertiary1Url(context).first())
+
+    suspend fun fetchTertiary2Raw(context: Context): String? =
+        fetchRaw(PlaylistPreferences.tertiary2Url(context).first())
+
     suspend fun fetchRaw(url: String): String? {
         return Dispatchers.IO.run {
             if (!url.startsWith("http", ignoreCase = true)) return@run null
@@ -63,23 +66,21 @@ object PlaylistRepository {
         PlaylistPreferences.setPrimaryUrl(context, url)
     }
 
+    suspend fun fetchAll(context: Context): List<String> {
+        val primary = fetchPrimaryRaw(context)
+        if (primary != null) return listOf(primary)
+        val secondary = fetchSecondaryRaw(context)
+        if (secondary != null) return listOf(secondary)
+        val t1 = fetchTertiary1Raw(context)
+        if (t1 != null) return listOf(t1)
+        val t2 = fetchTertiary2Raw(context)
+        return listOfNotNull(t2)
+    }
+
     suspend fun parseWithNativeEngine(raw: String): List<Channel> {
         return withContext(Dispatchers.IO) {
-            val typed: List<Channel> = try {
-                val ptr = NativePlaylistParser.nativeCreateParser()
-                val anyList: List<Any> = try {
-                    @Suppress("UNCHECKED_CAST")
-                    NativePlaylistParser.nativeParseM3U(ptr, raw) as List<Any>
-                } finally {
-                    NativePlaylistParser.nativeDestroyParser(ptr)
-                }
-                anyList.filterIsInstance<Channel>()
-            } catch (ne: Exception) {
-                Log.w(TAG, "Native parse failed, falling back to Kotlin parser", ne)
-                com.example.iptvplayer.M3UParser().parse(raw)
-                    .map { com.example.iptvplayer.model.Channel(it.name, it.url) }
-            }
-            return@withContext typed
+            runCatching { NativePlaylistParser.parseWithEngine(raw) }
+                .getOrDefault(emptyList())
         }
     }
 }

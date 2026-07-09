@@ -25,15 +25,19 @@ class PlayerController(
     private val context: Context,
     private val playerView: PlayerView,
     private val lifecycleScope: CoroutineScope,
-    private val onPlayerStateChanged: (Boolean) -> Unit = {}
+    private val onPlayerStateChanged: (Boolean) -> Unit = {},
+    private val onPlaybackError: ((String) -> Unit)? = null
 ) {
 
     companion object {
         private const val TAG = "PlayerController"
+        private const val FALLBACK_DELAY_MS = 800L
     }
 
     private var player: ExoPlayer? = null
-    private var fallbackJob: Job? = null
+    private var currentUris: List<String> = emptyList()
+    private var currentIndex: Int = 0
+    private var retryJob: Job? = null
     private var pbLoading: ProgressBar? = null
     private val activityContext: Context = context.applicationContext
 
@@ -81,13 +85,17 @@ class PlayerController(
                     override fun onPlayerError(error: androidx.media3.common.PlaybackException) {
                         Log.e("IPTV_PLAYER", "Playback Error: ${error.localizedMessage}", error)
                         android.widget.Toast.makeText(context, "Playback Error: ${error.localizedMessage}", android.widget.Toast.LENGTH_LONG).show()
+                        onPlaybackError?.invoke(error.localizedMessage ?: "Playback error")
+                        scheduleFallback()
                     }
                 })
             }
     }
 
     fun playMedia(uri: String) {
-        fallbackJob?.cancel()
+        retryJob?.cancel()
+        currentUris = listOf(uri)
+        currentIndex = 0
         try {
             val exo = player ?: run {
                 Log.w(TAG, "playMedia called with null player, reinitializing")
@@ -98,7 +106,10 @@ class PlayerController(
             (exo as? ExoPlayer)?.let { playerInstance ->
                 playerInstance.stop()
                 playerInstance.clearMediaItems()
-                val mediaItem = MediaItem.fromUri(uri)
+                val mediaItem = MediaItem.Builder()
+                    .setUri(uri)
+                    .setMimeType("application/x-mpegURL")
+                    .build()
                 playerInstance.setMediaItem(mediaItem)
                 playerInstance.prepare()
                 playerInstance.play()
@@ -128,17 +139,19 @@ class PlayerController(
 
     fun isPlaying(): Boolean = player?.isPlaying ?: false
     fun release() {
-        fallbackJob?.cancel()
+        retryJob?.cancel()
         try {
             player?.release()
         } catch (e: Exception) { /* ignore */ }
         player = null
+        currentUris = emptyList()
+        currentIndex = 0
     }
 
     private fun scheduleFallback() {
-        fallbackJob?.cancel()
-        fallbackJob = lifecycleScope.launch(Dispatchers.Main) {
-            delay(800)
+        retryJob?.cancel()
+        retryJob = lifecycleScope.launch(Dispatchers.Main) {
+            delay(FALLBACK_DELAY_MS)
             onPlayerStateChanged(false)
         }
     }

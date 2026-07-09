@@ -54,12 +54,15 @@ class MainActivity : ComponentActivity() {
 
     private lateinit var playerController: PlayerController
 
+    private val channelList = mutableListOf<Channel>()
+    private var channelsAdapter: ChannelsAdapter? = null
+
     // Background executor
     private val ioDispatcher = Dispatchers.IO
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_main)
+        setContentView(com.example.iptvplayer.R.layout.activity_main)
 
         requestNotificationPermission()
 
@@ -73,13 +76,22 @@ class MainActivity : ComponentActivity() {
         btnPip = findViewById(R.id.btnPip)
         tvStatus = findViewById(R.id.tvStatus)
 
-        playerController = PlayerController(this, findViewById(R.id.playerView), lifecycleScope) { playing ->
-            Log.d(TAG, "Player isPlaying=$playing")
-        }
+        playerController = PlayerController(
+            this,
+            findViewById(R.id.playerView),
+            lifecycleScope,
+            onPlayerStateChanged = { playing ->
+                Log.d(TAG, "Player isPlaying=$playing")
+            },
+            onPlaybackError = { errorMsg ->
+                Log.w(TAG, "Playback failed: $errorMsg")
+                advanceToNextChannel()
+            }
+        )
         playerController.setupGestures()
 
         rvChannels.layoutManager = LinearLayoutManager(this)
-        var channelsAdapter = ChannelsAdapter { pos ->
+        channelsAdapter = ChannelsAdapter { pos ->
             if (pos in channelList.indices) {
                 playChannel(channelList[pos])
             }
@@ -88,7 +100,6 @@ class MainActivity : ComponentActivity() {
 
         setupResizeModes()
 
-        // Notification permission toggle helper
         btnPip.setOnClickListener {
             startForegroundService(Intent(this, com.example.iptvplayer.service.PlaybackForegroundService::class.java))
             playerController.togglePip()
@@ -132,11 +143,11 @@ class MainActivity : ComponentActivity() {
         resizeModeSpinner.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
             override fun onItemSelected(parent: AdapterView<*>, view: View?, pos: Int, id: Long) {
                 val mode = when (pos) {
-                    0 -> 0 // PlayerView.RESIZE_MODE_FIT
-                    1 -> 1 // PlayerView.RESIZE_MODE_FILL
-                    2 -> 2 // PlayerView.RESIZE_MODE_ZOOM
-                    3 -> 3 // PlayerView.RESIZE_MODE_FIXED_WIDTH
-                    else -> 4 // PlayerView.RESIZE_MODE_FIXED_HEIGHT
+                    0 -> 0
+                    1 -> 1
+                    2 -> 2
+                    3 -> 3
+                    else -> 4
                 }
                 playerController.setResizeMode(mode)
             }
@@ -175,7 +186,7 @@ class MainActivity : ComponentActivity() {
                 val channels = PlaylistRepository.parseWithNativeEngine(raw)
                 channelList.clear()
                 channelList.addAll(channels)
-                (rvChannels.adapter as ChannelsAdapter).submitList(channelList)
+                channelsAdapter?.submitList(channelList.toList())
                 tvStatus.text = "Loaded ${channelList.size} channels"
                 PlaylistRepository.cacheUrl(this@MainActivity, url)
             } catch (t: Throwable) {
@@ -185,9 +196,42 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    private fun loadAllSources() {
+        lifecycleScope.launch(Dispatchers.Main) {
+            try {
+                tvStatus.text = "Loading all playlists..."
+                val allRaw = withContext(Dispatchers.IO) { PlaylistRepository.fetchAll(this@MainActivity) }
+                if (allRaw.isEmpty()) {
+                    tvStatus.text = "No playlists loaded"
+                    return@launch
+                }
+                val channels = allRaw.flatMap { raw ->
+                    PlaylistRepository.parseWithNativeEngine(raw)
+                }
+                channelList.clear()
+                channelList.addAll(channels)
+                channelsAdapter?.submitList(channelList.toList())
+                tvStatus.text = "Loaded ${channelList.size} channels from ${allRaw.size} sources"
+            } catch (t: Throwable) {
+                Log.e(TAG, "Load all sources failed", t)
+                tvStatus.text = "Error: ${t.message}"
+            }
+        }
+    }
+
+    private fun advanceToNextChannel() {
+        playerController.resetForChannelSwitch()
+        val pos = (channelsAdapter?.let { adapter -> 0 }).coerceAtLeast(0)
+        val next = (pos + 1).coerceAtMost(channelList.lastIndex)
+        if (next != pos && next >= 0) {
+            playChannel(channelList[next])
+        }
+    }
+
     private fun playChannel(channel: Channel) {
         lifecycleScope.launch(Dispatchers.Main) {
             try {
+                playerController.resetForChannelSwitch()
                 val chosenUrl = channel.url
                 playerController.playMedia(chosenUrl)
                 playerViewWrapper.visibility = View.VISIBLE
@@ -198,8 +242,6 @@ class MainActivity : ComponentActivity() {
             }
         }
     }
-
-    private val channelList = mutableListOf<Channel>()
 
     override fun onDestroy() {
         playerController.release()
@@ -224,21 +266,15 @@ class MainActivity : ComponentActivity() {
         }
 
         override fun onBindViewHolder(holder: ChannelVH, position: Int) {
-            holder.bind(items[position])
+            holder.bind(items[position], position)
         }
 
         override fun getItemCount(): Int = items.size
 
-        inner class ChannelVH(itemView: View) :
-            RecyclerView.ViewHolder(itemView) {
-            fun bind(channel: Channel) {
+        inner class ChannelVH(itemView: View) : RecyclerView.ViewHolder(itemView) {
+            fun bind(channel: Channel, position: Int) {
                 (itemView as TextView).text = channel.name
-                itemView.setOnClickListener {
-                    val pos = bindingAdapterPosition
-                    if (pos != RecyclerView.NO_POSITION) {
-                        onItemClick(pos)
-                    }
-                }
+                itemView.setOnClickListener { onItemClick(position) }
             }
         }
     }

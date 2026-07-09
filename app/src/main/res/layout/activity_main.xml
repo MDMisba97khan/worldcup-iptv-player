@@ -1,11 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:id="@+id/root"
     android:orientation="vertical"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:padding="8dp">
+    android:padding="8dp"
+    android:background="#000000">
 
     <EditText
         android:id="@+id/etM3uUrl"
@@ -13,7 +13,9 @@
         android:layout_height="wrap_content"
         android:hint="Enter .m3u URL"
         android:inputType="textUri"
-        android:imeOptions="actionGo"/>
+        android:imeOptions="actionGo"
+        android:textColor="#FFFFFF"
+        android:textColorHint="#AAAAAA"/>
 
     <LinearLayout
         android:orientation="horizontal"
@@ -44,7 +46,9 @@
     <Spinner
         android:id="@+id/resizeModeSpinner"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"/>
+        android:layout_height="wrap_content"
+        android:background="#111111"
+        android:popupBackground="#111111"/>
 
     <Button
         android:id="@+id/btnPip"
@@ -57,6 +61,7 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:text="Ready"
+        android:textColor="#FFFFFF"
         android:padding="8dp"/>
 
     <androidx.recyclerview.widget.RecyclerView
