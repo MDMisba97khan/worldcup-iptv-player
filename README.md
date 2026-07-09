@@ -16,7 +16,7 @@
 ## 🔧 Tech Stack
 - **Language:** Kotlin
 - **Player:** Media3 / ExoPlayer
-- **Networking:** OkHttp with DoH and secure HTTP datasource fallback
+- **Networking:** OkHttp with secure HTTP datasource support
 - **Storage:** DataStore for playlist URL caching
 - **Target:** Modern Android
 - **Min SDK:** 26
