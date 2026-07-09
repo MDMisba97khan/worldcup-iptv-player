@@ -160,7 +160,7 @@ class MainActivity : ComponentActivity() {
         val listener = object : OrientationEventListener(this) {
             private var lastLandscape = false
             override fun onOrientationChanged(orientation: Int) {
-                val isLandscape = orientation in 331..359 || orientation in 0..29 || orientation in 151..209
+                val isLandscape = orientation in 60..120 || orientation in 240..300
                 if (isLandscape == lastLandscape) return
                 lastLandscape = isLandscape
                 runOnUiThread {
