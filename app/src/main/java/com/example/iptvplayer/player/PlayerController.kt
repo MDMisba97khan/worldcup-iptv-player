@@ -14,6 +14,8 @@ import androidx.media3.common.util.UnstableApi
 import androidx.media3.datasource.DefaultHttpDataSource
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
+import com.example.iptvplayer.R
+import com.example.iptvplayer.R
 import androidx.media3.ui.PlayerView
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -47,20 +49,7 @@ class PlayerController(
             DefaultHttpDataSource.Factory()
         }
 
-        val dataSourceFactory: androidx.media3.datasource.DataSource.Factory =
-            try {
-                androidx.media3.datasource.DefaultDataSource.Factory(activityContext, httpDataSourceFactory)
-            } catch (e: Exception) {
-                Log.w(TAG, "DefaultDataSource wrapper failed, using raw factory", e)
-                httpDataSourceFactory as androidx.media3.datasource.DataSource.Factory
-            }
-
-        val mediaSourceFactory = try {
-            DefaultMediaSourceFactory(activityContext, dataSourceFactory)
-        } catch (e: Exception) {
-            Log.w(TAG, "DefaultMediaSourceFactory init failed, retrying without explicit data source factory", e)
-            DefaultMediaSourceFactory(activityContext)
-        }
+        val mediaSourceFactory = DefaultMediaSourceFactory(activityContext)
 
         Log.d(TAG, "Initializing ExoPlayer with media source factory=$mediaSourceFactory context=$activityContext")
 
