@@ -34,6 +34,7 @@ class PlayerController(
 
     private var player: ExoPlayer? = null
     private var fallbackJob: Job? = null
+    private var pbLoading: ProgressBar? = null
     private val activityContext = context.applicationContext
 
     @OptIn(UnstableApi::class)
@@ -60,7 +61,7 @@ class PlayerController(
                 playerView.player = exo
                 playerView.useController = true
 
-                val pbLoading = (playerView.parent as? android.view.ViewGroup)?.findViewById<ProgressBar>(R.id.pbLoading)
+                pbLoading = (playerView.parent as? android.view.ViewGroup)?.findViewById<ProgressBar>(R.id.pbLoading)
                 exo.addListener(object : Player.Listener {
                     override fun onPlaybackStateChanged(playbackState: Int) {
                         Log.d("IPTV_PLAYER", "State changed: $playbackState")
