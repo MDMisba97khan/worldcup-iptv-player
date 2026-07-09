@@ -50,12 +50,23 @@ class MainActivity : AppCompatActivity() {
         // Setup RecyclerView
         rvChannels.layoutManager = LinearLayoutManager(this)
         channelsAdapter = ChannelsAdapter { pos ->
-            playChannel(channelList[pos])
+            if (pos in channelList.indices) {
+                playChannel(channelList[pos])
+            }
         }
         rvChannels.adapter = channelsAdapter
 
         // Setup ExoPlayer
-        player = ExoPlayer.Builder(this).build()
+        player = try {
+            ExoPlayer.Builder(this).build()
+        } catch (e: Exception) {
+            e.printStackTrace()
+            null
+        } ?: run {
+            Toast.makeText(this, "Player init failed", Toast.LENGTH_SHORT).show()
+            finish()
+            return
+        }
         playerView.player = player
         findViewById<androidx.media3.ui.PlayerView>(R.id.playerView).useController = true
 
