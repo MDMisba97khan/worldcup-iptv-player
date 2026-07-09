@@ -89,14 +89,19 @@ class PlayerController(
     fun playMedia(uri: String) {
         fallbackJob?.cancel()
         try {
-            player?.let { exo ->
-                Log.d("IPTV_PLAYER", "playMedia uri=$uri")
-                exo.stop()
-                exo.clearMediaItems()
+            val exo = player ?: run {
+                Log.w(TAG, "playMedia called with null player, reinitializing")
+                initPlayer()
+                player
+            }
+            Log.d("IPTV_PLAYER", "playMedia uri=$uri")
+            (exo as? ExoPlayer)?.let { playerInstance ->
+                playerInstance.stop()
+                playerInstance.clearMediaItems()
                 val mediaItem = MediaItem.fromUri(uri)
-                exo.setMediaItem(mediaItem)
-                exo.prepare()
-                exo.play()
+                playerInstance.setMediaItem(mediaItem)
+                playerInstance.prepare()
+                playerInstance.play()
             }
         } catch (e: Exception) {
             Log.e(TAG, "playMedia failed for: $uri", e)
