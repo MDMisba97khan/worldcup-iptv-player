@@ -74,7 +74,6 @@ class PlayerController(
                         onPlayerStateChanged(isPlaying)
                         pbLoading?.visibility = if (playbackState == Player.STATE_BUFFERING) View.VISIBLE else View.GONE
                         if (playbackState == Player.STATE_ENDED || playbackState == Player.STATE_IDLE) {
-                            release()
                             onPlayerStateChanged(false)
                         }
                     }
@@ -82,7 +81,6 @@ class PlayerController(
                     override fun onPlayerError(error: androidx.media3.common.PlaybackException) {
                         Log.e("IPTV_PLAYER", "Playback Error: ${error.localizedMessage}", error)
                         android.widget.Toast.makeText(context, "Playback Error: ${error.localizedMessage}", android.widget.Toast.LENGTH_LONG).show()
-                        scheduleFallback()
                     }
                 })
             }
