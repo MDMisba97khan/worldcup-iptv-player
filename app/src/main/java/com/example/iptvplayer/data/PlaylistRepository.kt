@@ -4,11 +4,14 @@ import android.content.Context
 import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
 import android.util.Log
+import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.preferencesDataStore
 import com.example.iptvplayer.NativePlaylistParser
 import com.example.iptvplayer.model.Channel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.flow.map
 import okhttp3.Dns
 import okhttp3.OkHttpClient
 import okhttp3.Request
@@ -37,7 +40,7 @@ object PlaylistRepository {
     suspend fun fetchSecondaryRaw(context: Context): String? =
         fetchRaw(PlaylistPreferences.secondaryUrl(context).first())
 
-    private suspend fun fetchRaw(url: String): String? {
+    suspend fun fetchRaw(url: String): String? {
         return Dispatchers.IO.run {
             if (!url.startsWith("http", ignoreCase = true)) return@run null
             try {
@@ -54,6 +57,10 @@ object PlaylistRepository {
                 null
             }
         }
+    }
+
+    suspend fun cacheUrl(context: Context, url: String) {
+        PlaylistPreferences.setPrimaryUrl(context, url)
     }
 
     suspend fun parseWithNativeEngine(raw: String): List<Channel> {

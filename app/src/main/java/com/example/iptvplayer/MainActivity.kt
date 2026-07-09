@@ -165,20 +165,19 @@ class MainActivity : ComponentActivity() {
             try {
                 tvStatus.text = "Loading playlist..."
 
-                val primaryRaw = withContext(Dispatchers.IO) { PlaylistRepository.fetchPrimaryRaw(this@MainActivity) }
-                val secondaryRaw = withContext(Dispatchers.IO) { PlaylistRepository.fetchSecondaryRaw(this@MainActivity) }
+                val raw = withContext(Dispatchers.IO) { PlaylistRepository.fetchRaw(url) }
 
-                val chosen = primaryRaw ?: secondaryRaw
-                if (chosen == null) {
-                    tvStatus.text = "Failed to load both playlists"
+                if (raw == null) {
+                    tvStatus.text = "Failed to load playlist"
                     return@launch
                 }
 
-                val channels = PlaylistRepository.parseWithNativeEngine(chosen)
+                val channels = PlaylistRepository.parseWithNativeEngine(raw)
                 channelList.clear()
                 channelList.addAll(channels)
                 (rvChannels.adapter as ChannelsAdapter).submitList(channelList)
                 tvStatus.text = "Loaded ${channelList.size} channels"
+                PlaylistRepository.cacheUrl(this@MainActivity, url)
             } catch (t: Throwable) {
                 Log.e(TAG, "Playlist load failed", t)
                 tvStatus.text = "Error: ${t.message}"
