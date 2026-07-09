@@ -69,7 +69,7 @@ class MainActivity : ComponentActivity() {
 
         etM3uUrl = findViewById(R.id.etM3uUrl)
         btnLoad = findViewById(R.id.btnLoad)
-        btnPrimary = findViewById(R.id.btnPrimary)
+        val btnLoadAll = findViewById<Button>(R.id.btnLoadAll)        btnPrimary = findViewById(R.id.btnPrimary)
         btnSecondary = findViewById(R.id.btnSecondary)
         rvChannels = findViewById(R.id.rvChannels)
         playerViewWrapper = findViewById(R.id.playerViewWrapper)
@@ -131,6 +131,7 @@ class MainActivity : ComponentActivity() {
             lifecycleScope.launch { etM3uUrl.setText(PlaylistPreferences.secondaryUrl(this@MainActivity).first()) }
         }
         btnLoad.setOnClickListener { loadPlaylistFromUrl() }
+        btnLoadAll.setOnClickListener { loadAllSources() }
         etM3uUrl.setOnEditorActionListener { _, actionId, _ ->
             if (actionId == android.view.inputmethod.EditorInfo.IME_ACTION_GO) {
                 loadPlaylistFromUrl()
