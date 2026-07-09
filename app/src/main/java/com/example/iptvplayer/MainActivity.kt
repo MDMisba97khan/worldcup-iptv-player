@@ -11,6 +11,7 @@ import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.view.ViewGroup
 import android.widget.AdapterView
 import android.widget.ArrayAdapter
 import android.widget.Button
@@ -50,6 +51,7 @@ class MainActivity : ComponentActivity() {
     private lateinit var playerViewWrapper: View
     private lateinit var resizeModeSpinner: Spinner
     private lateinit var btnPip: Button
+    private lateinit var btnFullscreen: Button
     private lateinit var tvStatus: TextView
 
     private lateinit var playerController: PlayerController
@@ -74,6 +76,7 @@ class MainActivity : ComponentActivity() {
         playerViewWrapper = findViewById(R.id.playerViewWrapper)
         resizeModeSpinner = findViewById(R.id.resizeModeSpinner)
         btnPip = findViewById(R.id.btnPip)
+        btnFullscreen = findViewById(R.id.btnFullscreen)
         tvStatus = findViewById(R.id.tvStatus)
 
         playerController = PlayerController(
@@ -137,6 +140,8 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    private var isFullscreen = false
+
     private fun setupResizeModes() {
         val modes = listOf("FIT", "FILL", "ZOOM", "FIXED_WIDTH", "FIXED_HEIGHT")
         resizeModeSpinner.adapter = ArrayAdapter(this, android.R.layout.simple_spinner_dropdown_item, modes)
@@ -153,6 +158,25 @@ class MainActivity : ComponentActivity() {
             }
 
             override fun onNothingSelected(parent: AdapterView<*>) {}
+        }
+
+        btnFullscreen.setOnClickListener {
+            isFullscreen = !isFullscreen
+            if (isFullscreen) {
+                window.decorView.systemUiVisibility = (View.SYSTEM_UI_FLAG_FULLSCREEN
+                        or View.SYSTEM_UI_FLAG_HIDE_NAVIGATION
+                        or View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY)
+                val layoutParams = playerViewWrapper.layoutParams
+                layoutParams.height = ViewGroup.LayoutParams.MATCH_PARENT
+                playerViewWrapper.layoutParams = layoutParams
+                btnFullscreen.text = "⛷"
+            } else {
+                window.decorView.systemUiVisibility = View.SYSTEM_UI_FLAG_VISIBLE
+                val layoutParams = playerViewWrapper.layoutParams
+                layoutParams.height = (180 * resources.displayMetrics.density).toInt()
+                playerViewWrapper.layoutParams = layoutParams
+                btnFullscreen.text = "⛶"
+            }
         }
     }
 

@@ -41,6 +41,12 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="Load"/>
+
+        <Button
+            android:id="@+id/btnLoadAll"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="All"/>
     </LinearLayout>
 
     <Spinner
@@ -75,7 +81,7 @@
     <FrameLayout
         android:id="@+id/playerViewWrapper"
         android:layout_width="match_parent"
-        android:layout_height="220dp">
+        android:layout_height="180dp">
 
         <androidx.media3.ui.PlayerView
             android:id="@+id/playerView"
@@ -89,5 +95,12 @@
             android:layout_height="48dp"
             android:layout_gravity="center"
             android:visibility="gone"/>
+
+        <Button
+            android:id="@+id/btnFullscreen"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="end|bottom"
+            android:text="⛶"/>
     </FrameLayout>
 </LinearLayout>
