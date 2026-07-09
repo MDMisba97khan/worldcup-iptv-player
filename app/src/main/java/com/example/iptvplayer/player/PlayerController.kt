@@ -57,7 +57,7 @@ class PlayerController(
                 true
             )
             .setHandleAudioBecomingNoisy(true)
-            .setMediaSourceFactory(DefaultMediaSourceFactory(activityContext, httpDataSourceFactory))
+            .setMediaSourceFactory(DefaultMediaSourceFactory(activityContext).setDataSourceFactory(httpDataSourceFactory))
             .build()
             .also { exo ->
                 playerView.player = exo
