@@ -8,6 +8,7 @@ import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
 import android.util.Log
+import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.AdapterView
@@ -53,7 +54,7 @@ class MainActivity : ComponentActivity() {
     private lateinit var playerController: PlayerController
 
     // Background executor
-    private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO
+    private val ioDispatcher = Dispatchers.IO
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -88,7 +89,7 @@ class MainActivity : ComponentActivity() {
 
         // Notification permission toggle helper
         btnPip.setOnClickListener {
-            startForegroundService(Intent(this, PlaybackForegroundService::class.java))
+            startForegroundService(Intent(this, com.example.iptvplayer.service.PlaybackForegroundService::class.java))
             playerController.togglePip()
         }
 
@@ -190,11 +191,9 @@ class MainActivity : ComponentActivity() {
             try {
                 // In full implementation, iterate channel alternatives if URL format supports variants
                 val chosenUrl = channel.url
-                runOnMain {
-                    playerController.playMedia(chosenUrl)
+                playerController.playMedia(chosenUrl)
                     playerViewWrapper.visibility = View.VISIBLE
                     tvStatus.text = "Playing: ${channel.name}"
-                }
             } catch (t: Throwable) {
                 Log.e(TAG, "playChannel failed", t)
                 runOnMain("Playback error: ${t.message}")

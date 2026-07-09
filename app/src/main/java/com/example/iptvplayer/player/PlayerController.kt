@@ -82,7 +82,7 @@ class PlayerController(
         }
     }
 
-    fun setResizeMode(@PlayerView.ResizeMode resizeMode: Int) {
+    fun setResizeMode(resizeMode: Int) {
         playerView.resizeMode = resizeMode
     }
 

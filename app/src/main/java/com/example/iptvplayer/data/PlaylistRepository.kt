@@ -69,7 +69,7 @@ object PlaylistRepository {
                 }
             } catch (e: Exception) {
                 Log.e(TAG, "Native parse failed, falling back to Kotlin parser", e)
-                M3UParser().parse(raw)
+                com.example.iptvplayer.M3UParser().parse(raw)
             }
         }
     }

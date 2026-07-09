@@ -9,7 +9,6 @@ import android.content.Intent
 import android.os.Build
 import androidx.core.app.NotificationCompat
 import com.example.iptvplayer.MainActivity
-import com.example.iptvplayer.R
 
 class PlaybackForegroundService : Service() {
 
