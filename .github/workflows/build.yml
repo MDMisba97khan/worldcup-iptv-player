@@ -39,11 +39,23 @@ jobs:
       - name: Build Release APK
         run: gradle assembleRelease --no-daemon
 
+      - name: Locate APK
+        id: find_apk
+        run: |
+          set -e
+          APK_PATH=$(find app/build/outputs -type f -name "*.apk" | head -n 1)
+          if [ -z "$APK_PATH" ]; then
+            echo "::error::No APK found under app/build/outputs"
+            ls -R app/build/outputs || true
+            exit 1
+          fi
+          echo "apk=$APK_PATH" >> "$GITHUB_OUTPUT"
+
       - name: Upload APK as artifact
         uses: actions/upload-artifact@v4
         with:
           name: app-release-apk
-          path: app/build/outputs/apk/release/app-release.apk
+          path: ${{ steps.find_apk.outputs.apk }}
           retention-days: 30
 
       - name: Create GitHub Release with APK
@@ -52,7 +64,7 @@ jobs:
           tag_name: v1.0.0-build-${{ github.run_number }}
           name: Release v1.0.0-build-${{ github.run_number }}
           body: Automated build from commit ${{ github.sha }}
-          files: app/build/outputs/apk/release/app-release.apk
+          files: ${{ steps.find_apk.outputs.apk }}
           draft: false
           prerelease: false
         env:
