@@ -48,8 +48,8 @@
         android:clipToPadding="false"
         android:paddingBottom="8dp"/>
 
-    <!-- Video player (ExoPlayer) -->
-    <com.google.android.exoplayer2.ui.PlayerView
+    <!-- Video player (Media3) -->
+    <androidx.media3.ui.PlayerView
         android:id="@+id/playerView"
         android:layout_width="match_parent"
         android:layout_height="200dp"
