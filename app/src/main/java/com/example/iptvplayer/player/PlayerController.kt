@@ -7,7 +7,6 @@ import android.util.Log
 import android.view.MotionEvent
 import android.view.View
 import android.widget.ProgressBar
-import com.example.iptvplayer.R
 import androidx.media3.common.AudioAttributes
 import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
@@ -36,7 +35,7 @@ class PlayerController(
     private var player: ExoPlayer? = null
     private var fallbackJob: Job? = null
     private var pbLoading: ProgressBar? = null
-    private val activityContext = context.applicationContext
+    private val activityContext: Context = context.applicationContext
 
     @OptIn(UnstableApi::class)
     private fun initPlayer() {
@@ -48,6 +47,23 @@ class PlayerController(
             DefaultHttpDataSource.Factory()
         }
 
+        val dataSourceFactory: androidx.media3.datasource.DataSource.Factory =
+            try {
+                androidx.media3.datasource.DefaultDataSource.Factory(activityContext, httpDataSourceFactory)
+            } catch (e: Exception) {
+                Log.w(TAG, "DefaultDataSource wrapper failed, using raw factory", e)
+                httpDataSourceFactory as androidx.media3.datasource.DataSource.Factory
+            }
+
+        val mediaSourceFactory = try {
+            DefaultMediaSourceFactory(activityContext, dataSourceFactory)
+        } catch (e: Exception) {
+            Log.w(TAG, "DefaultMediaSourceFactory init failed, retrying without explicit data source factory", e)
+            DefaultMediaSourceFactory(activityContext)
+        }
+
+        Log.d(TAG, "Initializing ExoPlayer with media source factory=$mediaSourceFactory context=$activityContext")
+
         player = ExoPlayer.Builder(activityContext)
             .setAudioAttributes(
                 AudioAttributes.Builder()
@@ -57,7 +73,7 @@ class PlayerController(
                 true
             )
             .setHandleAudioBecomingNoisy(true)
-            .setMediaSourceFactory(DefaultMediaSourceFactory(activityContext).setDataSourceFactory(httpDataSourceFactory))
+            .setMediaSourceFactory(mediaSourceFactory)
             .build()
             .also { exo ->
                 playerView.player = exo
@@ -85,12 +101,13 @@ class PlayerController(
             }
     }
 
-    suspend fun playMedia(uri: String) {
+    fun playMedia(uri: String) {
         fallbackJob?.cancel()
         try {
             player?.let { exo ->
-                exo.setMediaItem(MediaItem.fromUri(uri))
-                Log.d("IPTV_PLAYER", "playMedia setMediaItem uri=$uri content=${exo.currentMediaItem?.mediaMetadata?.title}")
+                val mediaItem = MediaItem.fromUri(uri)
+                Log.d("IPTV_PLAYER", "playMedia uri=$uri")
+                exo.setMediaItem(mediaItem)
                 exo.prepare()
                 exo.play()
             }
