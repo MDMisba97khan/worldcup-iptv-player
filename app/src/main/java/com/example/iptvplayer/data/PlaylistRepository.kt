@@ -4,7 +4,6 @@ import android.content.Context
 import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
 import android.util.Log
-import com.example.iptvplayer.NativePlaylistParser
 import com.example.iptvplayer.model.Channel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
@@ -12,8 +11,6 @@ import kotlinx.coroutines.withContext
 import okhttp3.Dns
 import okhttp3.OkHttpClient
 import okhttp3.Request
-import okhttp3.dnsoverhttps.DnsOverHttps
-import java.net.InetAddress
 import java.util.concurrent.TimeUnit
 
 object PlaylistRepository {
@@ -60,18 +57,21 @@ object PlaylistRepository {
 
     suspend fun parseWithNativeEngine(raw: String): List<Channel> {
         return withContext(Dispatchers.IO) {
-            val nativeResult: List<Channel> = try {
+            val typed: List<Channel> = try {
                 val ptr = NativePlaylistParser.nativeCreateParser()
-                try {
-                    NativePlaylistParser.nativeParseM3U(ptr, raw)
+                val anyList: List<Any> = try {
+                    @Suppress("UNCHECKED_CAST")
+                    NativePlaylistParser.nativeParseM3U(ptr, raw) as List<Any>
                 } finally {
                     NativePlaylistParser.nativeDestroyParser(ptr)
                 }
+                anyList.filterIsInstance<Channel>()
             } catch (ne: Exception) {
                 Log.w(TAG, "Native parse failed, falling back to Kotlin parser", ne)
-                com.example.iptvplayer.M3UParser().parse(raw).map { com.example.iptvplayer.model.Channel(it.name, it.url) }
+                com.example.iptvplayer.M3UParser().parse(raw)
+                    .map { com.example.iptvplayer.model.Channel(it.name, it.url) }
             }
-            return@withContext nativeResult
+            return@withContext typed
         }
     }
 }
