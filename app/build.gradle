@@ -8,12 +8,12 @@ android {
 
     signingConfigs {
         release {
-            // Properties are injected at build time by the CI workflow.
-            if (project.hasProperty('RELEASE_STORE_FILE')) {
-                storeFile file(RELEASE_STORE_FILE)
-                storePassword RELEASE_STORE_PASSWORD
-                keyAlias RELEASE_KEY_ALIAS
-                keyPassword RELEASE_KEY_PASSWORD
+            def storeFileProp = project.hasProperty('RELEASE_STORE_FILE') ? RELEASE_STORE_FILE : System.getenv('RELEASE_STORE_FILE')
+            if (storeFileProp) {
+                storeFile file(storeFileProp)
+                storePassword System.getenv('RELEASE_STORE_PASSWORD') ?: ''
+                keyAlias System.getenv('RELEASE_KEY_ALIAS') ?: ''
+                keyPassword System.getenv('RELEASE_KEY_PASSWORD') ?: ''
             }
         }
     }
