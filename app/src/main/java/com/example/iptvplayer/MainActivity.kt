@@ -155,7 +155,7 @@ class MainActivity : AppCompatActivity() {
 
     private inner class ChannelsAdapter(
         private val onItemClick: (Int) -> Unit
-    ) : RecyclerView.Adapter<ChannelViewHolder>() {
+    ) : RecyclerView.Adapter<ChannelsAdapter.ChannelVH>() {
 
         private var items = listOf<M3UParser.Channel>()
 
@@ -164,19 +164,19 @@ class MainActivity : AppCompatActivity() {
             notifyDataSetChanged()
         }
 
-        override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ChannelViewHolder {
+        override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ChannelVH {
             val view = LayoutInflater.from(parent.context)
                 .inflate(android.R.layout.simple_list_item_1, parent, false)
-            return ChannelViewHolder(view)
+            return ChannelVH(view)
         }
 
-        override fun onBindViewHolder(holder: ChannelViewHolder, position: Int) {
+        override fun onBindViewHolder(holder: ChannelVH, position: Int) {
             holder.bind(items[position])
         }
 
         override fun getItemCount(): Int = items.size
 
-        inner class ChannelViewHolder(itemView: View) :
+        inner class ChannelVH(itemView: View) :
             RecyclerView.ViewHolder(itemView) {
             fun bind(channel: M3UParser.Channel) {
                 (itemView as TextView).text = channel.name
