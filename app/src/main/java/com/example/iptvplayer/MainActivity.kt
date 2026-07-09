@@ -28,7 +28,6 @@ import com.example.iptvplayer.data.PlaylistPreferences
 import com.example.iptvplayer.data.PlaylistRepository
 import com.example.iptvplayer.model.Channel
 import com.example.iptvplayer.player.PlayerController
-import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
@@ -102,11 +101,19 @@ class MainActivity : ComponentActivity() {
             if (secondary.isNotBlank()) btnSecondary.text = "Secondary ✓"
         }
 
+        var primaryUrl = ""
+        var secondaryUrl = ""
+        lifecycleScope.launch {
+            primaryUrl = PlaylistPreferences.primaryUrl(this@MainActivity).first()
+            secondaryUrl = PlaylistPreferences.secondaryUrl(this@MainActivity).first()
+            if (primaryUrl.isNotBlank()) btnPrimary.text = "Primary ✓"
+            if (secondaryUrl.isNotBlank()) btnSecondary.text = "Secondary ✓"
+        }
         btnPrimary.setOnClickListener {
-            etM3uUrl.setText(PlaylistPreferences.primaryUrl(this).first())
+            lifecycleScope.launch { etM3uUrl.setText(PlaylistPreferences.primaryUrl(this@MainActivity).first()) }
         }
         btnSecondary.setOnClickListener {
-            etM3uUrl.setText(PlaylistPreferences.secondaryUrl(this).first())
+            lifecycleScope.launch { etM3uUrl.setText(PlaylistPreferences.secondaryUrl(this@MainActivity).first()) }
         }
         btnLoad.setOnClickListener { loadPlaylistFromUrl() }
         etM3uUrl.setOnEditorActionListener { _, actionId, _ ->

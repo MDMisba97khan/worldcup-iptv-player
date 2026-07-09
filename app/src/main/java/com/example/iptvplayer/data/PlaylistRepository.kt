@@ -13,24 +13,15 @@ import okhttp3.Dns
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.dnsoverhttps.DnsOverHttps
-import okhttp3.HttpUrl
+import java.net.InetAddress
 import java.util.concurrent.TimeUnit
 
 object PlaylistRepository {
 
     private const val TAG = "PlaylistRepository"
 
-    private val dohDns = DnsOverHttps(
-        okHttpClient = OkHttpClient.Builder()
-            .connectTimeout(10, TimeUnit.SECONDS)
-            .readTimeout(15, TimeUnit.SECONDS)
-            .build(),
-        platform = Dns.SYSTEM,
-        url = HttpUrl.get("https://cloudflare-dns.com/dns-query")
-    )
-
-    private val okHttpClient = OkHttpClient.Builder()
-        .dns(dohDns)
+    private val okHttpClient: OkHttpClient = OkHttpClient.Builder()
+        .dns(Dns.SYSTEM)
         .connectTimeout(15, TimeUnit.SECONDS)
         .readTimeout(30, TimeUnit.SECONDS)
         .build()
@@ -49,15 +40,15 @@ object PlaylistRepository {
         fetchRaw(PlaylistPreferences.secondaryUrl(context).first())
 
     private suspend fun fetchRaw(url: String): String? {
-        return withContext(Dispatchers.IO) {
-            if (!url.startsWith("http", ignoreCase = true)) return@withContext null
+        return Dispatchers.IO.run {
+            if (!url.startsWith("http", ignoreCase = true)) return@run null
             try {
                 val req = Request.Builder()
                     .url(url)
                     .header("User-Agent", "WorldCupIPTV/2.0")
                     .build()
                 okHttpClient.newCall(req).execute().use { resp ->
-                    if (!resp.isSuccessful) return@withContext null
+                    if (!resp.isSuccessful) return@run null
                     resp.body?.string()
                 }
             } catch (e: Exception) {
@@ -78,7 +69,7 @@ object PlaylistRepository {
                 }
             } catch (e: Exception) {
                 Log.e(TAG, "Native parse failed, falling back to Kotlin parser", e)
-                com.example.iptvplayer.M3UParser().parse(raw)
+                M3UParser().parse(raw)
             }
         }
     }
