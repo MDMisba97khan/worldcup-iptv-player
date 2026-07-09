@@ -14,8 +14,6 @@ import androidx.media3.common.util.UnstableApi
 import androidx.media3.datasource.DefaultHttpDataSource
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
-import com.example.iptvplayer.R
-import com.example.iptvplayer.R
 import androidx.media3.ui.PlayerView
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -68,7 +66,7 @@ class PlayerController(
                 playerView.player = exo
                 playerView.useController = true
 
-                pbLoading = (playerView.parent as? android.view.ViewGroup)?.findViewById<ProgressBar>(R.id.pbLoading)
+                pbLoading = (playerView.parent as? android.view.ViewGroup)?.findViewById<ProgressBar>(com.example.iptvplayer.R.id.pbLoading)
                 exo.addListener(object : Player.Listener {
                     override fun onPlaybackStateChanged(playbackState: Int) {
                         Log.d("IPTV_PLAYER", "State changed: $playbackState")
