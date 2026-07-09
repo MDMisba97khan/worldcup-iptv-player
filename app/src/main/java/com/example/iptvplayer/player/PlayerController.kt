@@ -66,7 +66,7 @@ class PlayerController(
                 playerView.player = exo
                 playerView.useController = true
 
-                pbLoading = (playerView.parent as? android.view.ViewGroup)?.findViewById<ProgressBar>(R.id.pbLoading)
+                pbLoading = (playerView.parent as? android.view.ViewGroup)?.findViewById<ProgressBar>(com.example.iptvplayer.R.id.pbLoading)
                 exo.addListener(object : Player.Listener {
                     override fun onPlaybackStateChanged(playbackState: Int) {
                         Log.d("IPTV_PLAYER", "State changed: $playbackState")
