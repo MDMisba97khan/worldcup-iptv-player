@@ -160,15 +160,16 @@ class MainActivity : ComponentActivity() {
             return
         }
 
-        tvStatus.text = "Loading playlist..."
-        lifecycleScope.launch(ioDispatcher) {
+        lifecycleScope.launch(Dispatchers.Main) {
             try {
-                val primaryRaw = PlaylistRepository.fetchPrimaryRaw(this@MainActivity)
-                val secondaryRaw = PlaylistRepository.fetchSecondaryRaw(this@MainActivity)
+                tvStatus.text = "Loading playlist..."
+
+                val primaryRaw = withContext(Dispatchers.IO) { PlaylistRepository.fetchPrimaryRaw(this@MainActivity) }
+                val secondaryRaw = withContext(Dispatchers.IO) { PlaylistRepository.fetchSecondaryRaw(this@MainActivity) }
 
                 val chosen = primaryRaw ?: secondaryRaw
                 if (chosen == null) {
-                    runOnMain("Failed to load both playlists")
+                    tvStatus.text = "Failed to load both playlists"
                     return@launch
                 }
 
@@ -179,29 +180,22 @@ class MainActivity : ComponentActivity() {
                 tvStatus.text = "Loaded ${channelList.size} channels"
             } catch (t: Throwable) {
                 Log.e(TAG, "Playlist load failed", t)
-                runOnMain("Error: ${t.message}")
+                tvStatus.text = "Error: ${t.message}"
             }
         }
     }
 
     private fun playChannel(channel: Channel) {
-        lifecycleScope.launch(ioDispatcher) {
+        lifecycleScope.launch(Dispatchers.Main) {
             try {
-                // In full implementation, iterate channel alternatives if URL format supports variants
                 val chosenUrl = channel.url
                 playerController.playMedia(chosenUrl)
-                    playerViewWrapper.visibility = View.VISIBLE
-                    tvStatus.text = "Playing: ${channel.name}"
+                playerViewWrapper.visibility = View.VISIBLE
+                tvStatus.text = "Playing: ${channel.name}"
             } catch (t: Throwable) {
                 Log.e(TAG, "playChannel failed", t)
                 runOnMain("Playback error: ${t.message}")
             }
-        }
-    }
-
-    private fun runOnMain(message: String) {
-        lifecycleScope.launch(Dispatchers.Main) {
-            tvStatus.text = message
         }
     }
 
