@@ -60,17 +60,18 @@ object PlaylistRepository {
 
     suspend fun parseWithNativeEngine(raw: String): List<Channel> {
         return withContext(Dispatchers.IO) {
-            try {
+            val nativeResult: List<Channel> = try {
                 val ptr = NativePlaylistParser.nativeCreateParser()
                 try {
                     NativePlaylistParser.nativeParseM3U(ptr, raw)
                 } finally {
                     NativePlaylistParser.nativeDestroyParser(ptr)
                 }
-            } catch (e: Exception) {
-                Log.e(TAG, "Native parse failed, falling back to Kotlin parser", e)
+            } catch (ne: Exception) {
+                Log.w(TAG, "Native parse failed, falling back to Kotlin parser", ne)
                 com.example.iptvplayer.M3UParser().parse(raw)
             }
+            return@withContext nativeResult
         }
     }
 }

@@ -173,12 +173,10 @@ class MainActivity : ComponentActivity() {
                 }
 
                 val channels = PlaylistRepository.parseWithNativeEngine(chosen)
-                runOnMain {
-                    channelList.clear()
-                    channelList.addAll(channels)
-                    (rvChannels.adapter as ChannelsAdapter).submitList(channelList)
-                    tvStatus.text = "Loaded ${channelList.size} channels"
-                }
+                channelList.clear()
+                channelList.addAll(channels)
+                (rvChannels.adapter as ChannelsAdapter).submitList(channelList)
+                tvStatus.text = "Loaded ${channelList.size} channels"
             } catch (t: Throwable) {
                 Log.e(TAG, "Playlist load failed", t)
                 runOnMain("Error: ${t.message}")
