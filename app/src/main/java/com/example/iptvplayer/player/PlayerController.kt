@@ -53,6 +53,7 @@ class PlayerController(
 
                 exo.addListener(object : Player.Listener {
                     override fun onPlaybackStateChanged(playbackState: Int) {
+                        Log.d("IPTV_PLAYER", "State changed: $playbackState")
                         val isPlaying = exo.isPlaying
                         onPlayerStateChanged(isPlaying)
                         if (playbackState == Player.STATE_ENDED || playbackState == Player.STATE_IDLE) {
@@ -62,7 +63,7 @@ class PlayerController(
                     }
 
                     override fun onPlayerError(error: androidx.media3.common.PlaybackException) {
-                        Log.e(TAG, "Playback error: ${error.message}")
+                        Log.e("IPTV_PLAYER", "Playback Error: ${error.localizedMessage}", error)
                         scheduleFallback()
                     }
                 })
