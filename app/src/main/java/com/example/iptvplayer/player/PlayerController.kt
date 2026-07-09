@@ -56,6 +56,7 @@ class PlayerController(
                 true
             )
             .setHandleAudioBecomingNoisy(true)
+            .setMediaSourceFactory(DefaultMediaSourceFactory(activityContext, httpDataSourceFactory))
             .build()
             .also { exo ->
                 playerView.player = exo
@@ -88,6 +89,7 @@ class PlayerController(
         try {
             player?.let { exo ->
                 exo.setMediaItem(MediaItem.fromUri(uri))
+                Log.d("IPTV_PLAYER", "playMedia setMediaItem uri=$uri content=${exo.currentMediaItem?.mediaMetadata?.title}")
                 exo.prepare()
                 exo.play()
             }
