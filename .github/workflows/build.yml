@@ -87,7 +87,7 @@ jobs:
         with:
           tag_name: v1.0.0-build-${{ github.run_number }}
           name: Release v1.0.0-build-${{ github.run_number }}
-          body: Automated signed build from commit ${{ github.sha }}
+          body: "Production distribution artifact build. Pre-compiled signed application package."
           files: dist/worldcup-iptv-player.apk
           draft: false
           prerelease: false
