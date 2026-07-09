@@ -57,6 +57,7 @@ class MainActivity : AppCompatActivity() {
         // Setup ExoPlayer
         player = ExoPlayer.Builder(this).build()
         playerView.player = player
+        findViewById<androidx.media3.ui.PlayerView>(R.id.playerView).useController = true
 
         // Load button click
         btnLoad.setOnClickListener { loadPlaylistFromUrl() }
