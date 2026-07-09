@@ -69,7 +69,8 @@ class MainActivity : ComponentActivity() {
 
         etM3uUrl = findViewById(R.id.etM3uUrl)
         btnLoad = findViewById(R.id.btnLoad)
-        val btnLoadAll = findViewById<Button>(R.id.btnLoadAll)        btnPrimary = findViewById(R.id.btnPrimary)
+        val btnLoadAll = findViewById<Button>(R.id.btnLoadAll)
+        btnPrimary = findViewById(R.id.btnPrimary)
         btnSecondary = findViewById(R.id.btnSecondary)
         rvChannels = findViewById(R.id.rvChannels)
         playerViewWrapper = findViewById(R.id.playerViewWrapper)
