@@ -37,9 +37,3 @@ cd worldcup-iptv-player
 
 ## 📄 License
 Add your license choice here.
-
-## 🛡️ Security
-- Do not open issues or PRs with secrets, signing material, tokens, or internal infrastructure details.
-- Use signed GitHub releases and verify APK signatures before installing.
-- Enable secret scanning, push protection, and Dependabot security updates.
-- Restrict `main` with required review and required status checks.
