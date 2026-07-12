@@ -34,6 +34,3 @@ git clone https://github.com/MDMisba97khan/worldcup-iptv-player.git
 cd worldcup-iptv-player
 ./gradlew assembleRelease
 ```
-
-## 📄 License
-Add your license choice here.
